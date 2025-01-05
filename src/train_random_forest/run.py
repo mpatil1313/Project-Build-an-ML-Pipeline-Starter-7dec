@@ -5,6 +5,7 @@ This script trains a Random Forest
 import argparse
 import logging
 import os
+import tempfile
 import shutil
 import matplotlib.pyplot as plt
 
@@ -17,7 +18,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OrdinalEncoder, FunctionTransformer
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, FunctionTransformer
 
 import wandb
 from sklearn.ensemble import RandomForestRegressor
@@ -74,6 +75,7 @@ def go(args):
     ######################################
     # Fit the pipeline sk_pipe by calling the .fit method on X_train and y_train
     # YOUR CODE HERE
+    sk_pipe.fit(X_train, y_train)
     ######################################
 
     # Compute r2 and MAE
@@ -95,25 +97,35 @@ def go(args):
     ######################################
     # Save the sk_pipe pipeline as a mlflow.sklearn model in the directory "random_forest_dir"
     # HINT: use mlflow.sklearn.save_model
-    signature = mlflow.models.infer_signature(X_val, y_pred)
-    mlflow.sklearn.save_model(
-        # YOUR CODE HERE
-        signature = signature,
-        input_example = X_train.iloc[:5]
-    )
+    # signature = mlflow.models.infer_signature(X_val[processed_features], y_pred) # [processed_features]
+    signature = mlflow.models.infer_signature(pd.DataFrame(sk_pipe["preprocessor"].transform(X_val)), y_pred)
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        export_path = os.path.join(temp_dir, "random_forest_dir")
+        mlflow.sklearn.save_model(
+            # YOUR CODE HERE
+            sk_pipe,
+            export_path,
+            serialization_format=mlflow.sklearn.SERIALIZATION_FORMAT_CLOUDPICKLE,
+            # YOUR CODE HERE
+            signature = signature,
+            input_example = X_train.iloc[:5]
+        )
     ######################################
 
 
-    # Upload the model we just exported to W&B
-    artifact = wandb.Artifact(
-        args.output_artifact,
-        type = 'model_export',
-        description = 'Trained ranfom forest artifact',
-        metadata = rf_config
-    )
-    artifact.add_dir('random_forest_dir')
-    run.log_artifact(artifact)
-
+        # Upload the model we just exported to W&B
+        artifact = wandb.Artifact(
+            args.output_artifact,
+            type = 'model_export',
+            description = 'Trained ranfom forest artifact',
+            metadata = rf_config
+        )
+        artifact.add_dir(export_path)
+        run.log_artifact(artifact)
+        artifact.wait() #apa
+        
     # Plot feature importance
     fig_feat_imp = plot_feature_importance(sk_pipe, processed_features)
 
@@ -122,6 +134,7 @@ def go(args):
     run.summary['r2'] = r_squared
     # Now save the variable mae under the key "mae".
     # YOUR CODE HERE
+    run.summary['mae'] = mae
     ######################################
 
     # Upload to W&B the feture importance visualization
@@ -164,6 +177,9 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
     # 1 - A SimpleImputer(strategy="most_frequent") to impute missing values
     # 2 - A OneHotEncoder() step to encode the variable
     non_ordinal_categorical_preproc = make_pipeline(
+        # YOUR CODE HERE
+        SimpleImputer(strategy="most_frequent"),
+        OneHotEncoder()
         # YOUR CODE HERE
     )
     ######################################
@@ -217,7 +233,7 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
     processed_features = ordinal_categorical + non_ordinal_categorical + zero_imputed + ["last_review", "name"]
 
     # Create random forest
-    random_forest = RandomForestRegressor(**rf_config)
+    random_Forest = RandomForestRegressor(**rf_config)
 
     ######################################
     # Create the inference pipeline. The pipeline must have 2 steps: 
@@ -228,6 +244,8 @@ def get_inference_pipeline(rf_config, max_tfidf_features):
     sk_pipe = Pipeline(
         steps =[
         # YOUR CODE HERE
+                ("preprocessor", preprocessor),
+                ("random_forest", random_Forest)
         ]
     )
 
