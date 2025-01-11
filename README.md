@@ -38,13 +38,13 @@ and click on `Fork` in the upper right corner. This will create a fork in your G
 repository that is under your control. Now clone the repository locally so you can start working on it:
 
 ```
-git clone https://github.com/[your github username]/Project-Build-an-ML-Pipeline-Starter.git
+git clone https://github.com/mpatil1313/Project-Build-an-ML-Pipeline-Starter-7dec.git
 ```
 
 and go into the repository:
 
 ```
-cd Project-Build-an-ML-Pipeline-Starter
+cd Project-Build-an-ML-Pipeline-Starter-7dec
 ```
 Commit and push to the repository often while you make progress towards the solution. Remember 
 to add meaningful commit messages.
@@ -72,6 +72,9 @@ You should see a message similar to:
 wandb: Appending key for api.wandb.ai to your netrc file: /home/[your username]/.netrc
 ```
 
+### WANDB Projects URL
+https://wandb.ai/mpatil3-5683479314/nyc_airbnb?nw=nwusermpatil3
+###
 
 ### The configuration
 As usual, the parameters controlling the pipeline are defined in the ``config.yaml`` file defined in
